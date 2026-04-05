@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Budget — BTC vs KAS v7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --btc: #f7931a;
+  --kas: #49deb0;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --bg: #0b0e13;
+  --surface: #111620;
+  --surface2: #181e2b;
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.15);
+  --text: #e8eaf0;
+  --muted: #5a6278;
+  --grid-line: rgba(255,255,255,0.013);
+  --chart-grid: rgba(255,255,255,0.04);
+  --tag-bg: rgba(255,255,255,0.06);
+  --tag-color: #5a6278;
+  --table-hover: rgba(255,255,255,0.02);
+  --sk-mid: #1e2638;
+}
+html.light {
+  --bg: #f2f4f8;
+  --surface: #ffffff;
+  --surface2: #e8ebf0;
+  --border: rgba(0,0,0,0.08);
+  --border-hover: rgba(0,0,0,0.18);
+  --text: #111827;
+  --muted: #8492aa;
+  --grid-line: rgba(0,0,0,0.025);
+  --chart-grid: rgba(0,0,0,0.06);
+  --tag-bg: rgba(0,0,0,0.05);
+  --tag-color: #8492aa;
+  --table-hover: rgba(0,0,0,0.02);
+  --sk-mid: #d4d9e4;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden;transition:background .25s,color .25s}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;transition:background-image .3s}
+
+.wrap{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:0 24px 72px}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:36px 0 28px;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap}
+.logo-group{display:flex;align-items:center;gap:20px}
+.coin-logos{display:flex;align-items:center;gap:0}
+.coin-logo{width:69px;height:69px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--border)}
+.coin-logo:last-child{margin-left:-14px}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.logo-btc{background:#1a1200}
+.logo-kas{background:#000;border-color:rgba(73,222,176,0.3)}
+html.light .logo-kas{background:#e0f7f2}
+html.light .budget-coin-icon.kas-icon{background:#e0f7f2}
+.vs-badge{font-size:9px;letter-spacing:0.1em;color:var(--muted);padding:0 4px;font-family:var(--font-mono)}
+.title-block h1{font-family:var(--font-head);font-size:clamp(22px,4vw,44px);font-weight:800;letter-spacing:-1px;line-height:1}
+.title-block h1 .btc{color:var(--btc)}
+.title-block h1 .kas{color:var(--kas)}
+.title-block p{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:0.07em;text-transform:uppercase}
+#ts{font-size:11px;color:var(--muted)}
+#refresh-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:11px;padding:6px 14px;border-radius:4px;cursor:pointer;transition:color .2s,border-color .2s}
+#refresh-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── PRICE TICKER ── */
+.price-ticker{display:flex;gap:16px;margin:16px 0 0;flex-wrap:wrap}
+.ticker-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px}
+.ticker-dot{width:7px;height:7px;border-radius:50%}
+
+/* ── TAB BAR ── */
+.tab-bar{display:flex;margin:28px 0 0;border-bottom:1px solid var(--border)}
+.tab{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:10px 20px;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.tab.active{color:var(--text);border-bottom-color:var(--text)}
+.tab:hover:not(.active){color:var(--text)}
+
+/* ── SECTION LABEL ── */
+.section-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:28px 0 12px;display:flex;align-items:center;gap:10px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── SECURITY BUDGET HERO ── */
+.budget-hero{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.budget-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;position:relative;overflow:hidden}
+.budget-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.budget-card.btc-card::before{background:var(--btc)}
+.budget-card.kas-card::before{background:var(--kas)}
+.budget-card-header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.budget-coin-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.budget-coin-icon.btc-icon{background:#1a1200}
+.budget-coin-icon.kas-icon{background:#000}
+.budget-coin-name{font-family:var(--font-head);font-size:16px;font-weight:700}
+.budget-coin-name.btc{color:var(--btc)}
+.budget-coin-name.kas{color:var(--kas)}
+.budget-total-label{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.budget-total{font-family:var(--font-head);font-size:clamp(28px,4vw,42px);font-weight:800;line-height:1}
+.budget-total.btc{color:var(--btc)}
+.budget-total.kas{color:var(--kas)}
+.budget-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.budget-breakdown{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+.breakdown-row{display:flex;align-items:center;gap:10px}
+.breakdown-bar-wrap{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.breakdown-bar{height:100%;border-radius:3px;transition:width .6s ease}
+.breakdown-label{font-size:11px;color:var(--muted);min-width:80px}
+.breakdown-value{font-size:12px;font-weight:700;min-width:90px;text-align:right}
+
+/* ── CARDS GRID ── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:18px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.card.btc-card::before{background:var(--btc)}
+.card.kas-card::before{background:var(--kas)}
+.card-label{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.card-value{font-family:var(--font-head);font-size:22px;font-weight:700;line-height:1}
+.card-value.btc-val{color:var(--btc)}
+.card-value.kas-val{color:var(--kas)}
+.card-sub{font-size:10px;color:var(--muted);margin-top:5px}
+
+/* ── DOMINANCE ── */
+.dom-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:20px}
+.dom-labels{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px}
+.dom-bar{height:10px;border-radius:5px;background:var(--surface2);overflow:hidden;display:flex}
+.dom-btc{background:var(--btc);transition:width .8s ease}
+.dom-kas{background:var(--kas);transition:width .8s ease}
+.dom-sub{font-size:10px;color:var(--muted);margin-top:8px}
+
+/* ── CHART PANEL ── */
+.chart-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:24px}
+.chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.chart-title{font-family:var(--font-head);font-size:14px;font-weight:700}
+.chart-legend{display:flex;gap:16px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.legend-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.chart-tabs{display:flex;gap:0;margin-bottom:16px}
+.chart-tab{font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 12px;cursor:pointer;font-family:var(--font-mono);transition:color .15s,background .15s}
+.chart-tab:first-child{border-radius:4px 0 0 4px}
+.chart-tab:last-child{border-radius:0 4px 4px 0}
+.chart-tab.active{background:rgba(128,128,128,.12);color:var(--text)}
+.chart-wrap{position:relative;height:260px}
+
+/* ── TABLE ── */
+.compare-table{width:100%;border-collapse:collapse;font-size:12px}
+.compare-table th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 16px;text-align:left;border-bottom:1px solid var(--border);font-weight:400}
+.compare-table td{padding:13px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table tr:hover td{background:var(--table-hover)}
+.val-btc{color:var(--btc);font-weight:700}
+.val-kas{color:var(--kas);font-weight:700}
+.val-muted{color:var(--muted)}
+.tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:3px;background:var(--tag-bg);color:var(--tag-color);white-space:nowrap}
+.tag.reward{background:rgba(247,147,26,.1);color:#d4801a}
+.tag.fee{background:rgba(73,222,176,.1);color:#2aab80}
+
+/* ── EMISSION CHART ── */
+.emission-wrap{position:relative;height:200px}
+
+/* ── SKELETON ── */
+.sk{display:inline-block;width:80px;height:22px;background:linear-gradient(90deg,var(--surface2) 25%,var(--sk-mid) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:3px}
+@keyframes shimmer{to{background-position:-200% 0}}
+
+/* ── ERROR ── */
+.error-banner{background:rgba(220,60,60,.1);border:1px solid rgba(220,60,60,.3);color:#f06060;border-radius:4px;padding:10px 16px;font-size:12px;margin-top:14px;display:none}
+.error-banner.show{display:block}
+
+/* ── FOOTER ── */
+footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+footer a{color:var(--muted);text-decoration:underline}
+.note{font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6}
+
+/* ── MINING STATS ── */
+.mining-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.mining-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;position:relative;overflow:hidden}
+.mining-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.mining-card.btc-card::before{background:var(--btc)}
+.mining-card.kas-card::before{background:var(--kas)}
+.mining-card-header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.mining-stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.mining-stat-row:last-child{border-bottom:none}
+.mining-stat-label{font-size:11px;color:var(--muted)}
+.mining-stat-value{font-size:12px;font-weight:700}
+.pool-list{margin-top:4px;display:flex;flex-direction:column;gap:6px}
+.pool-row{display:flex;align-items:center;gap:8px}
+.pool-name{font-size:11px;color:var(--muted);min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pool-bar-wrap{flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.pool-bar{height:100%;border-radius:3px;transition:width .6s ease}
+.pool-pct{font-size:11px;font-weight:700;min-width:38px;text-align:right}
+@media(max-width:680px){.mining-grid{grid-template-columns:1fr}}
+
+
+
+
+/* ── THEME TOGGLE ── */
+#theme-toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:11px;padding:6px 12px;border-radius:4px;cursor:pointer;transition:color .2s,border-color .2s,background .2s}
+#theme-toggle:hover{color:var(--text);border-color:var(--border-hover)}
+.toggle-track{width:28px;height:16px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);position:relative;transition:background .25s}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--muted);transition:transform .25s,background .25s}
+html.light .toggle-track{background:#c8d0e0}
+html.light .toggle-thumb{transform:translateX(12px);background:#444}
+
+@media(max-width:680px){
+  .budget-hero{grid-template-columns:1fr}
+  .cards-grid{grid-template-columns:1fr 1fr}
+  .dual-chart-wrap{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="logo-group">
+    <div class="coin-logos">
+      <!-- Bitcoin logo SVG -->
+      <div class="coin-logo logo-btc">
+        <svg width="42" height="42" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="16" fill="#f7931a"/>
+          <path d="M22.8 13.8c.3-2.1-1.3-3.2-3.5-4l.7-2.9-1.8-.4-.7 2.8c-.5-.1-.9-.2-1.4-.3l.7-2.8-1.8-.5-.7 2.9c-.4-.1-.8-.2-1.2-.3v0l-2.4-.6-.5 1.9s1.3.3 1.3.3c.7.2.9.6.8 1l-.8 3.4c0 0 .1 0 .2.1l-.2-.1-1.2 4.7c-.1.2-.3.6-.9.4 0 0-1.3-.3-1.3-.3L8 21.3l2.3.6c.4.1.9.2 1.3.4l-.7 2.9 1.8.5.7-2.9c.5.1 1 .3 1.4.4l-.7 2.9 1.8.5.7-2.9c2.9.5 5.1.3 6-2.3.7-2.1 0-3.3-1.5-4.1 1.1-.3 1.9-1 2.1-2.5zm-3.8 5.3c-.5 2.1-3.9 1-5 .7l.9-3.6c1.1.3 4.6.8 4.1 2.9zm.5-5.3c-.5 1.9-3.3 1-4.3.7l.8-3.3c.9.2 3.9.7 3.5 2.6z" fill="white"/>
+        </svg>
+      </div>
+      <!-- Kaspa logo — official icon from kaspa.org/media-kit/ -->
+      <div class="coin-logo logo-kas">
+        <img src="https://kaspa.org/wp-content/uploads/2023/06/Kaspa-Icon-Dark-Green-on-Black.svg" id="kas-logo-header" width="69" height="69" alt="Kaspa" style="display:block;border-radius:50%">
+      </div>
+    </div>
+    <div class="title-block">
+      <h1><span class="btc">BTC</span> <span style="color:var(--muted);font-size:0.55em">vs</span> <span class="kas">KAS</span></h1>
+      <p>Security Budget Dashboard</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="ts">Loading…</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span id="theme-label">Light</span>
+      </button>
+      <button id="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+    </div>
+  </div>
+</header>
+
+<!-- PRICE TICKER -->
+<div class="price-ticker">
+  <div class="ticker-pill">
+    <span class="ticker-dot" style="background:var(--btc)"></span>
+    <span style="color:var(--muted);font-size:11px">BTC</span>
+    <span id="btc-price-pill" style="font-weight:700">—</span>
+  </div>
+  <div class="ticker-pill">
+    <span class="ticker-dot" style="background:var(--kas)"></span>
+    <span style="color:var(--muted);font-size:11px">KAS</span>
+    <span id="kas-price-pill" style="font-weight:700">—</span>
+  </div>
+  <div class="ticker-pill">
+    <span style="color:var(--muted);font-size:11px">BTC Block Reward</span>
+    <span style="font-weight:700;color:var(--btc)">3.125 BTC</span>
+  </div>
+  <div class="ticker-pill">
+    <span style="color:var(--muted);font-size:11px">KAS Reward/sec</span>
+    <span id="kas-reward-pill" style="font-weight:700;color:var(--kas)">—</span>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab active" onclick="switchPeriod('1d',this)">24 Hours</button>
+  <button class="tab" onclick="switchPeriod('1w',this)">7 Days</button>
+  <button class="tab" onclick="switchPeriod('1m',this)">30 Days</button>
+
+</div>
+
+<div id="error-banner" class="error-banner">⚠ Some live data could not be fetched. Estimates shown where needed.</div>
+
+
+
+<!-- MAIN DASHBOARD PANEL -->
+<div id="main-panel">
+
+<!-- TOTAL SECURITY BUDGET HERO -->
+<div class="section-label">Total Security Budget (Block Rewards + Fees)</div>
+<div class="budget-hero">
+  <!-- BTC -->
+  <div class="budget-card btc-card">
+    <div class="budget-card-header">
+      <div class="budget-coin-icon btc-icon">
+        <svg width="20" height="20" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path d="M22.8 13.8c.3-2.1-1.3-3.2-3.5-4l.7-2.9-1.8-.4-.7 2.8c-.5-.1-.9-.2-1.4-.3l.7-2.8-1.8-.5-.7 2.9c-.4-.1-.8-.2-1.2-.3v0l-2.4-.6-.5 1.9s1.3.3 1.3.3c.7.2.9.6.8 1l-.8 3.4c0 0 .1 0 .2.1l-.2-.1-1.2 4.7c-.1.2-.3.6-.9.4 0 0-1.3-.3-1.3-.3L8 21.3l2.3.6c.4.1.9.2 1.3.4l-.7 2.9 1.8.5.7-2.9c.5.1 1 .3 1.4.4l-.7 2.9 1.8.5.7-2.9c2.9.5 5.1.3 6-2.3.7-2.1 0-3.3-1.5-4.1 1.1-.3 1.9-1 2.1-2.5zm-3.8 5.3c-.5 2.1-3.9 1-5 .7l.9-3.6c1.1.3 4.6.8 4.1 2.9zm.5-5.3c-.5 1.9-3.3 1-4.3.7l.8-3.3c.9.2 3.9.7 3.5 2.6z" fill="white"/></svg>
+      </div>
+      <span class="budget-coin-name btc">Bitcoin</span>
+    </div>
+    <div class="budget-total-label">Total Security Budget</div>
+    <div class="budget-total btc" id="btc-budget-total"><span class="sk"></span></div>
+    <div class="budget-sub" id="btc-budget-sub"></div>
+    <div class="budget-breakdown">
+      <div class="breakdown-row">
+        <span class="breakdown-label" style="color:var(--muted)">Block Rewards</span>
+        <div class="breakdown-bar-wrap"><div class="breakdown-bar" id="btc-reward-bar" style="background:var(--btc);width:0%"></div></div>
+        <span class="breakdown-value val-btc" id="btc-reward-val">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label" style="color:var(--muted)">Fees</span>
+        <div class="breakdown-bar-wrap"><div class="breakdown-bar" id="btc-fee-bar" style="background:rgba(247,147,26,0.4);width:0%"></div></div>
+        <span class="breakdown-value" style="color:rgba(247,147,26,0.7)" id="btc-fee-val">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KAS -->
+  <div class="budget-card kas-card">
+    <div class="budget-card-header">
+      <div class="budget-coin-icon kas-icon">
+        <img src="https://kaspa.org/wp-content/uploads/2023/06/Kaspa-Icon-Dark-Green-on-Black.svg" id="kas-logo-card" width="30" height="30" alt="Kaspa" style="display:block;border-radius:50%">
+      </div>
+      <span class="budget-coin-name kas">Kaspa</span>
+    </div>
+    <div class="budget-total-label">Total Security Budget</div>
+    <div class="budget-total kas" id="kas-budget-total"><span class="sk"></span></div>
+    <div class="budget-sub" id="kas-budget-sub"></div>
+    <div class="budget-breakdown">
+      <div class="breakdown-row">
+        <span class="breakdown-label" style="color:var(--muted)">Block Rewards</span>
+        <div class="breakdown-bar-wrap"><div class="breakdown-bar" id="kas-reward-bar" style="background:var(--kas);width:0%"></div></div>
+        <span class="breakdown-value val-kas" id="kas-reward-val">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label" style="color:var(--muted)">Fees</span>
+        <div class="breakdown-bar-wrap"><div class="breakdown-bar" id="kas-fee-bar" style="background:rgba(73,222,176,0.4);width:0%"></div></div>
+        <span class="breakdown-value" style="color:rgba(73,222,176,0.7)" id="kas-fee-val">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DOMINANCE -->
+<div class="section-label">Security Budget Dominance (USD)</div>
+<div class="dom-panel">
+  <div class="dom-labels">
+    <span style="color:var(--btc)" id="dom-btc-label">BTC —%</span>
+    <span style="color:var(--kas)" id="dom-kas-label">KAS —%</span>
+  </div>
+  <div class="dom-bar">
+    <div class="dom-btc" id="dom-btc-bar" style="width:50%"></div>
+    <div class="dom-kas" id="dom-kas-bar" style="width:50%"></div>
+  </div>
+  <div class="dom-sub" id="dom-sub">Comparing combined miner revenue across the selected period.</div>
+</div>
+
+<!-- BREAKDOWN CARDS -->
+<div class="section-label">Block Rewards Breakdown</div>
+<div class="cards-grid">
+  <div class="card btc-card">
+    <div class="card-label">BTC Reward / Block</div>
+    <div class="card-value btc-val">3.125 BTC</div>
+    <div class="card-sub"></div>
+  </div>
+  <div class="card btc-card">
+    <div class="card-label" id="btc-reward-period-label">BTC Reward / Day (USD)</div>
+    <div class="card-value btc-val" id="btc-reward-day">—</div>
+    <div class="card-sub" id="btc-blocks-sub">~144 blocks/day</div>
+  </div>
+  <div class="card kas-card">
+    <div class="card-label">KAS Reward / Block</div>
+    <div class="card-value kas-val" id="kas-per-block">—</div>
+    <div class="card-sub"></div>
+  </div>
+  <div class="card kas-card">
+    <div class="card-label" id="kas-reward-period-label">KAS Reward / Day (USD)</div>
+    <div class="card-value kas-val" id="kas-reward-day">—</div>
+    <div class="card-sub" id="kas-blocks-sub">~864,000 blocks/day</div>
+  </div>
+</div>
+
+<!-- FEE METRICS -->
+<div class="section-label">Fee Revenue Breakdown</div>
+<div class="cards-grid">
+  <div class="card btc-card">
+    <div class="card-label">BTC Fees (BTC)</div>
+    <div class="card-value btc-val" id="btc-fee-btc">—</div>
+    <div class="card-sub">% of security budget</div>
+  </div>
+  <div class="card btc-card">
+    <div class="card-label">BTC Fees (USD)</div>
+    <div class="card-value btc-val" id="btc-fee-usd">—</div>
+    <div class="card-sub" id="btc-fee-sub"></div>
+  </div>
+  <div class="card kas-card">
+    <div class="card-label">KAS Fees (KAS)</div>
+    <div class="card-value kas-val" id="kas-fee-kas">—</div>
+    <div class="card-sub">% of security budget</div>
+  </div>
+  <div class="card kas-card">
+    <div class="card-label">KAS Fees (USD)</div>
+    <div class="card-value kas-val" id="kas-fee-usd">—</div>
+    <div class="card-sub" id="kas-fee-sub"></div>
+  </div>
+</div>
+
+<!-- FULL METRICS TABLE -->
+<div class="section-label">Full Comparison</div>
+<div class="chart-panel" style="padding:0">
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th style="color:var(--btc)">Bitcoin</th>
+        <th style="color:var(--kas)">Kaspa</th>
+      </tr>
+    </thead>
+    <tbody id="metrics-body">
+      <tr><td colspan="4" style="padding:20px;color:var(--muted)">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- MINING STATISTICS -->
+<div class="section-label">Mining Statistics</div>
+<div class="mining-grid">
+
+  <!-- BTC Mining -->
+  <div class="mining-card btc-card">
+    <div class="mining-card-header">
+      <div class="budget-coin-icon btc-icon">
+        <svg width="20" height="20" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path d="M22.8 13.8c.3-2.1-1.3-3.2-3.5-4l.7-2.9-1.8-.4-.7 2.8c-.5-.1-.9-.2-1.4-.3l.7-2.8-1.8-.5-.7 2.9c-.4-.1-.8-.2-1.2-.3v0l-2.4-.6-.5 1.9s1.3.3 1.3.3c.7.2.9.6.8 1l-.8 3.4c0 0 .1 0 .2.1l-.2-.1-1.2 4.7c-.1.2-.3.6-.9.4 0 0-1.3-.3-1.3-.3L8 21.3l2.3.6c.4.1.9.2 1.3.4l-.7 2.9 1.8.5.7-2.9c.5.1 1 .3 1.4.4l-.7 2.9 1.8.5.7-2.9c2.9.5 5.1.3 6-2.3.7-2.1 0-3.3-1.5-4.1 1.1-.3 1.9-1 2.1-2.5zm-3.8 5.3c-.5 2.1-3.9 1-5 .7l.9-3.6c1.1.3 4.6.8 4.1 2.9zm.5-5.3c-.5 1.9-3.3 1-4.3.7l.8-3.3c.9.2 3.9.7 3.5 2.6z" fill="white"/></svg>
+      </div>
+      <span class="budget-coin-name btc">Bitcoin Mining</span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Network Hashrate</span>
+      <span class="mining-stat-value val-btc" id="btc-hashrate"><span class="sk"></span></span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Difficulty</span>
+      <span class="mining-stat-value val-btc" id="btc-difficulty"><span class="sk"></span></span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Avg Block Time</span>
+      <span class="mining-stat-value val-btc" id="btc-blocktime"><span class="sk"></span></span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Avg Tx Cost</span>
+      <span class="mining-stat-value val-btc" id="btc-fee-rate"><span class="sk"></span></span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Tx Count (24h)</span>
+      <span class="mining-stat-value val-btc" id="btc-tx-count"><span class="sk"></span></span>
+    </div>
+  </div>
+
+  <!-- KAS Mining -->
+  <div class="mining-card kas-card">
+    <div class="mining-card-header">
+      <div class="budget-coin-icon kas-icon">
+        <img src="https://kaspa.org/wp-content/uploads/2023/06/Kaspa-Icon-Dark-Green-on-Black.svg" id="kas-logo-mining" width="30" height="30" alt="Kaspa" style="display:block;border-radius:50%">
+      </div>
+      <span class="budget-coin-name kas">Kaspa Mining</span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Network Hashrate</span>
+      <span class="mining-stat-value val-kas" id="kas-hashrate"><span class="sk"></span></span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Difficulty</span>
+      <span class="mining-stat-value val-kas" id="kas-difficulty"><span class="sk"></span></span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Block Rate</span>
+      <span class="mining-stat-value val-kas">~10 blocks/sec</span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Avg Tx Cost</span>
+      <span class="mining-stat-value val-kas" id="kas-fee-rate"><span class="sk"></span></span>
+    </div>
+    <div class="mining-stat-row">
+      <span class="mining-stat-label">Tx Count (24h)</span>
+      <span class="mining-stat-value val-kas" id="kas-tx-count"><span class="sk"></span></span>
+    </div>
+  </div>
+
+</div>
+
+<!-- HASHRATE HISTORY (under Mining Statistics) -->
+<div class="section-label" style="margin-top:20px">Hashrate History</div>
+<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+  <!-- BTC Hashrate Chart -->
+  <div class="chart-panel" style="flex:1;min-width:280px">
+    <div class="chart-header">
+      <div>
+        <div class="chart-title" style="color:var(--btc)">BTC Hashrate Over Time</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Sampled every 5 min · stored locally · <span id="btc-hr-count">0</span> data points</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="chart-tab active" id="btc-hr-range-all" onclick="setHrRange('btc','all',this)">All</button>
+        <button class="chart-tab" id="btc-hr-range-24h" onclick="setHrRange('btc','24h',this)">24h</button>
+        <button class="chart-tab" id="btc-hr-range-7d" onclick="setHrRange('btc','7d',this)">7d</button>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:220px"><canvas id="btc-hr-chart"></canvas></div>
+  </div>
+  <!-- KAS Hashrate Chart -->
+  <div class="chart-panel" style="flex:1;min-width:280px">
+    <div class="chart-header">
+      <div>
+        <div class="chart-title" style="color:var(--kas)">KAS Hashrate Over Time</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Sampled every 5 min · stored locally · <span id="kas-hr-count">0</span> data points</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="chart-tab active" id="kas-hr-range-all" onclick="setHrRange('kas','all',this)">All</button>
+        <button class="chart-tab" id="kas-hr-range-24h" onclick="setHrRange('kas','24h',this)">24h</button>
+        <button class="chart-tab" id="kas-hr-range-7d" onclick="setHrRange('kas','7d',this)">7d</button>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:220px"><canvas id="kas-hr-chart"></canvas></div>
+  </div>
+</div>
+<div class="note" style="margin-top:8px">Hashrate data is stored in your browser's localStorage. It grows with each refresh (every 5 min) and persists across sessions on this device.</div>
+
+<!-- BTC MARKET DATA (CoinGecko) -->
+<div class="section-label">Bitcoin Market Data <span style="font-size:9px;color:var(--btc);margin-left:4px">▸ CoinGecko</span></div>
+<div class="cards-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+  <div class="card btc-card">
+    <div class="card-label">Market Cap</div>
+    <div class="card-value btc-val" id="btc-market-cap"><span class="sk"></span></div>
+    <div class="card-sub">USD</div>
+  </div>
+  <div class="card btc-card">
+    <div class="card-label">24h Volume</div>
+    <div class="card-value btc-val" id="btc-volume"><span class="sk"></span></div>
+    <div class="card-sub">USD</div>
+  </div>
+  <div class="card btc-card">
+    <div class="card-label">Circulating Supply</div>
+    <div class="card-value btc-val" style="font-size:16px" id="btc-circ-supply"><span class="sk"></span></div>
+    <div class="card-sub">BTC</div>
+  </div>
+  <div class="card btc-card">
+    <div class="card-label">Max Supply</div>
+    <div class="card-value btc-val" style="font-size:16px">21M BTC</div>
+    <div class="card-sub">Hard cap</div>
+  </div>
+</div>
+
+<!-- KAS MARKET DATA (CoinGecko) -->
+<div class="section-label">Kaspa Market Data <span style="font-size:9px;color:var(--kas);margin-left:4px">▸ CoinGecko</span></div>
+<div class="cards-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+  <div class="card kas-card">
+    <div class="card-label">Market Cap</div>
+    <div class="card-value kas-val" id="kas-market-cap"><span class="sk"></span></div>
+    <div class="card-sub">USD</div>
+  </div>
+  <div class="card kas-card">
+    <div class="card-label">24h Volume</div>
+    <div class="card-value kas-val" id="kas-volume"><span class="sk"></span></div>
+    <div class="card-sub">USD</div>
+  </div>
+  <div class="card kas-card">
+    <div class="card-label">Circulating Supply</div>
+    <div class="card-value kas-val" style="font-size:16px" id="kas-circ-supply"><span class="sk"></span></div>
+    <div class="card-sub">KAS</div>
+  </div>
+  <div class="card kas-card">
+    <div class="card-label">Max Supply</div>
+    <div class="card-value kas-val" style="font-size:16px" id="kas-max-supply"><span class="sk"></span></div>
+    <div class="card-sub">KAS</div>
+  </div>
+</div>
+
+</div><!-- /main-panel -->
+
+<footer>
+  <div>Data: <a href="https://mempool.space/docs/api" target="_blank">mempool.space</a> · <a href="https://api.blockchair.com" target="_blank">Blockchair</a> · <a href="https://blockchain.info/ticker" target="_blank">Blockchain.com</a> · <a href="https://api.kaspa.org/docs" target="_blank">api.kaspa.org</a> · <a href="https://coingecko.com" target="_blank">CoinGecko</a></div>
+  <div>Auto-refreshes every 5 min · All times local</div>
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+
+// ══════════════════════════════════════════════════
+// THEME TOGGLE
+// ══════════════════════════════════════════════════
+let isDark = true;
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.classList.toggle('light', !isDark);
+  document.getElementById('theme-label').textContent = isDark ? 'Light' : 'Dark';
+
+  // Swap Kaspa logo: dark bg uses dark-green-on-black, light bg uses dark-green-on-white
+  const kasLogoSrc = isDark
+    ? 'https://kaspa.org/wp-content/uploads/2023/06/Kaspa-Icon-Dark-Green-on-Black.svg'
+    : 'https://kaspa.org/wp-content/uploads/2023/06/Kaspa-Icon-Dark-Green-on-White.svg';
+  const h = document.getElementById('kas-logo-header');
+  const c = document.getElementById('kas-logo-card');
+  const m = document.getElementById('kas-logo-mining');
+  if (h) h.src = kasLogoSrc;
+  if (c) c.src = kasLogoSrc;
+  if (m) m.src = kasLogoSrc;
+
+  // Save preference
+  try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e) {}
+
+}
+
+function initTheme() {
+  let saved = 'dark';
+  try { saved = localStorage.getItem('theme') || 'dark'; } catch(e) {}
+  isDark = saved === 'dark';
+  document.documentElement.classList.toggle('light', !isDark);
+  document.getElementById('theme-label').textContent = isDark ? 'Light' : 'Dark';
+  // Apply correct Kaspa logo immediately
+  if (!isDark) {
+    const kasLogoSrc = 'https://kaspa.org/wp-content/uploads/2023/06/Kaspa-Icon-Dark-Green-on-White.svg';
+    const h = document.getElementById('kas-logo-header');
+    const c = document.getElementById('kas-logo-card');
+    const m = document.getElementById('kas-logo-mining');
+    if (h) h.src = kasLogoSrc;
+    if (c) c.src = kasLogoSrc;
+    if (m) m.src = kasLogoSrc;
+  }
+}
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let currentPeriod = '1d';
+let btcPrice = 83000;
+let kasPrice = 0.032;
+let lastData = null;
+
+const DAYS = { '1d':1, '1w':7, '1m':30 };
+const MS_PERIOD = { '1d':'24h', '1w':'1w', '1m':'1m' };
+const PERIOD_NAMES = { '1d':'24 Hours', '1w':'7 Days', '1m':'30 Days' };
+
+// Bitcoin: 3.125 BTC/block, ~144 blocks/day, ~6 blocks/hour
+const BTC_REWARD = 3.125;
+const BTC_BLOCKS_PER_DAY = 144;
+
+// Kaspa emission schedule — discrete monthly steps sourced from official PDF.
+// Each entry: [ISO date string of phase start, KAS/sec rate for that month].
+// Phases 1-6 are the pre-chromatic flat 500 KAS/sec period.
+// Phase 7 onward is the chromatic halving schedule.
+const KAS_EMISSION_SCHEDULE = [
+  ['2021-11-08', 500],       // Phase 1
+  ['2021-12-08', 500],       // Phase 2
+  ['2022-01-08', 500],       // Phase 3
+  ['2022-02-08', 500],       // Phase 4
+  ['2022-03-08', 500],       // Phase 5
+  ['2022-04-08', 500],       // Phase 6
+  ['2022-05-08', 440],       // Phase 7  — chromatic begins
+  ['2022-06-07', 415.3046976],
+  ['2022-07-07', 391.995436],
+  ['2022-08-07', 369.9944227],
+  ['2022-09-06', 349.2282314],
+  ['2022-10-07', 329.6275569],
+  ['2022-11-06', 311.1269837],
+  ['2022-12-07', 293.6647679],
+  ['2023-01-06', 277.182631],
+  ['2023-02-05', 261.6255653],
+  ['2023-03-08', 246.9416506],
+  ['2023-04-07', 233.0818808],
+  ['2023-05-08', 220],
+  ['2023-06-07', 207.6523488],
+  ['2023-07-08', 195.997718],
+  ['2023-08-07', 184.9972114],
+  ['2023-09-07', 174.6141157],
+  ['2023-10-07', 164.8137785],
+  ['2023-11-06', 155.5634919],
+  ['2023-12-07', 146.832384],
+  ['2024-01-06', 138.5913155],
+  ['2024-02-06', 130.8127827],
+  ['2024-03-07', 123.4708253],
+  ['2024-04-07', 116.5409404],
+  ['2024-05-07', 110],
+  ['2024-06-06', 103.8261744],
+  ['2024-07-07', 97.998859],
+  ['2024-08-06', 92.49860568],
+  ['2024-09-06', 87.30705786],
+  ['2024-10-06', 82.40688923],
+  ['2024-11-06', 77.78174593],
+  ['2024-12-06', 73.41619198],
+  ['2025-01-06', 69.29565774],
+  ['2025-02-05', 65.40639133],
+  ['2025-03-07', 61.73541266],
+  ['2025-04-07', 58.27047019],
+  ['2025-05-07', 55],
+  ['2025-06-07', 51.9130872],
+  ['2025-07-07', 48.9994295],
+  ['2025-08-07', 46.24930284],
+  ['2025-09-06', 43.65352893],
+  ['2025-10-06', 41.20344461],
+  ['2025-11-06', 38.89087297],
+  ['2025-12-06', 36.70809599],
+  ['2026-01-06', 34.64782887],
+  ['2026-02-05', 32.70319566],
+  ['2026-03-08', 30.86770633],
+  ['2026-04-07', 29.13523509],
+  ['2026-05-08', 27.5],
+  ['2026-06-07', 25.9565436],
+  ['2026-07-07', 24.49971475],
+  ['2026-08-07', 23.12465142],
+  ['2026-09-06', 21.82676446],
+  ['2026-10-07', 20.60172231],
+  ['2026-11-06', 19.44543648],
+  ['2026-12-07', 18.35404799],
+  ['2027-01-06', 17.32391444],
+  ['2027-02-05', 16.35159783],
+  ['2027-03-08', 15.43385316],
+  ['2027-04-07', 14.56761755],
+  ['2027-05-08', 13.75],
+  ['2027-06-07', 12.9782718],
+  ['2027-07-08', 12.24985737],
+  ['2027-08-07', 11.56232571],
+  ['2027-09-07', 10.91338223],
+  ['2027-10-07', 10.30086115],
+  ['2027-11-06', 9.722718241],
+  ['2027-12-07', 9.177023997],
+  ['2028-01-06', 8.661957218],
+  ['2028-02-06', 8.175798916],
+  ['2028-03-07', 7.716926582],
+  ['2028-04-07', 7.283808774],
+  ['2028-05-07', 6.875],
+  ['2028-06-06', 6.4891359],
+  ['2028-07-07', 6.124928687],
+  ['2028-08-06', 5.781162855],
+  ['2028-09-06', 5.456691116],
+  ['2028-10-06', 5.150430577],
+  ['2028-11-06', 4.861359121],
+  ['2028-12-06', 4.588511999],
+  ['2029-01-06', 4.330978609],
+  ['2029-02-05', 4.087899458],
+  ['2029-03-07', 3.858463291],
+  ['2029-04-07', 3.641904387],
+  ['2029-05-07', 3.4375],
+  ['2029-06-07', 3.24456795],
+  ['2029-07-07', 3.062464344],
+  ['2029-08-07', 2.890581427],
+  ['2029-09-06', 2.728345558],
+  ['2029-10-06', 2.575215288],
+  ['2029-11-06', 2.43067956],
+  ['2029-12-06', 2.294255999],
+  ['2030-01-06', 2.165489305],
+  ['2030-02-05', 2.043949729],
+  ['2030-03-08', 1.929231646],
+  ['2030-04-07', 1.820952193],
+  ['2030-05-08', 1.71875],
+  ['2030-06-07', 1.622283975],
+  ['2030-07-07', 1.531232172],
+  ['2030-08-07', 1.445290714],
+  ['2030-09-06', 1.364172779],
+  ['2030-10-07', 1.287607644],
+  ['2030-11-06', 1.21533978],
+  ['2030-12-07', 1.147128],
+  ['2031-01-06', 1.082744652],
+  ['2031-02-05', 1.021974864],
+  ['2031-03-08', 0.964615823],
+  ['2031-04-07', 0.910476097],
+  ['2031-05-08', 0.859375],
+  ['2031-06-07', 0.811141987],
+  ['2031-07-08', 0.765616086],
+  ['2031-08-07', 0.722645357],
+  ['2031-09-07', 0.68208639],
+  ['2031-10-07', 0.643803822],
+  ['2031-11-06', 0.60766989],
+  ['2031-12-07', 0.573564],
+  ['2032-01-06', 0.541372326],
+  ['2032-02-06', 0.510987432],
+  ['2032-03-07', 0.482307911],
+  ['2032-04-07', 0.455238048],
+  ['2032-05-07', 0.4296875],
+  ['2032-06-06', 0.405570994],
+  ['2032-07-07', 0.382808043],
+  ['2032-08-06', 0.361322678],
+  ['2032-09-06', 0.341043195],
+  ['2032-10-06', 0.321901911],
+  ['2032-11-06', 0.303834945],
+  ['2032-12-06', 0.286782],
+  ['2033-01-06', 0.270686163],
+  ['2033-02-05', 0.255493716],
+  ['2033-03-07', 0.241153956],
+  ['2033-04-07', 0.227619024],
+  ['2033-05-07', 0.21484375],
+  ['2033-06-07', 0.202785497],
+  ['2033-07-07', 0.191404021],
+  ['2033-08-07', 0.180661339],
+  ['2033-09-06', 0.170521597],
+  ['2033-10-06', 0.160950956],
+  ['2033-11-06', 0.151917473],
+  ['2033-12-06', 0.143391],
+  ['2034-01-06', 0.135343082],
+  ['2034-02-05', 0.127746858],
+  ['2034-03-08', 0.120576978],
+  ['2034-04-07', 0.113809512],
+  ['2034-05-08', 0.107421875],
+  ['2034-06-07', 0.101392748],
+  ['2034-07-07', 0.095702011],
+  ['2034-08-07', 0.09033067],
+  ['2034-09-06', 0.085260799],
+  ['2034-10-07', 0.080475478],
+  ['2034-11-06', 0.075958736],
+  ['2034-12-07', 0.0716955],
+  ['2035-01-06', 0.067671541],
+  ['2035-02-05', 0.063873429],
+  ['2035-03-08', 0.060288489],
+  ['2035-04-07', 0.056904756],
+  ['2035-05-08', 0.053710938],
+  ['2035-06-07', 0.050696374],
+  ['2035-07-08', 0.047851005],
+  ['2035-08-07', 0.045165335],
+  ['2035-09-07', 0.042630399],
+  ['2035-10-07', 0.040237739],
+  ['2035-11-06', 0.037979368],
+  ['2035-12-07', 0.03584775],
+  ['2036-01-06', 0.03383577],
+  ['2036-02-06', 0.031936715],
+  ['2036-03-07', 0.030144244],
+  ['2036-04-07', 0.028452378],
+  ['2036-05-07', 0.026855469],
+  ['2036-06-06', 0.025348187],
+  ['2036-07-07', 0.023925503],
+  ['2036-08-06', 0.022582667],
+  ['2036-09-06', 0.0213152],
+  ['2036-10-06', 0.020118869],
+  ['2036-11-06', 0.018989684],
+  ['2036-12-06', 0.017923875],
+  ['2037-01-06', 0.016917885],
+  ['2037-02-05', 0.015968357],
+  ['2037-03-07', 0.015072122],
+  ['2037-04-07', 0.014226189],
+];
+
+// Convert schedule to timestamp-sorted array of { ts, perSec } for fast lookup
+const KAS_EMISSION_PHASES = KAS_EMISSION_SCHEDULE.map(([d, r]) => ({
+  ts: new Date(d + 'T00:00:00Z').getTime(),
+  perSec: r
+}));
+
+function kaspaRewardPerBlock(atTime) {
+  const now = atTime != null ? atTime : Date.now();
+  // Find the last phase whose start timestamp is <= now
+  let perSec = KAS_EMISSION_PHASES[0].perSec;
+  for (let i = KAS_EMISSION_PHASES.length - 1; i >= 0; i--) {
+    if (now >= KAS_EMISSION_PHASES[i].ts) {
+      perSec = KAS_EMISSION_PHASES[i].perSec;
+      break;
+    }
+  }
+  // At 10 BPS, reward per block = perSec / 10
+  return { perSec, perBlock: perSec / 10 };
+}
+
+// ══════════════════════════════════════════════════
+// FORMAT HELPERS
+// ══════════════════════════════════════════════════
+function fmtUSD(n, compact=true) {
+  if (!n && n!==0) return '—';
+  if (compact) {
+    if (Math.abs(n)>=1e12) return '$'+(n/1e12).toFixed(2)+'T';
+    if (Math.abs(n)>=1e9) return '$'+(n/1e9).toFixed(2)+'B';
+    if (Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
+    if (Math.abs(n)>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+    return '$'+n.toFixed(2);
+  }
+  return '$'+Math.round(n).toLocaleString();
+}
+function fmtBTC(n) { if(!n&&n!==0)return'—'; return n.toFixed(4)+' BTC'; }
+function fmtKAS(n) {
+  if(!n&&n!==0)return'—';
+  if(n>=1e6)return(n/1e6).toFixed(2)+'M KAS';
+  if(n>=1e3)return(n/1e3).toFixed(1)+'K KAS';
+  return n.toFixed(2)+' KAS';
+}
+function fmtPct(n) { if(!n&&n!==0)return'—'; return n.toFixed(2)+'%'; }
+function setEl(id,html){ const e=document.getElementById(id); if(e)e.innerHTML=html; }
+function showError(v){ document.getElementById('error-banner').classList.toggle('show',v); }
+
+// ══════════════════════════════════════════════════
+// FETCH PRICES
+// Primary:  CoinGecko (BTC + KAS in one call)
+// Fallback: Blockchain.com ticker (BTC price)
+//           Blockchair /bitcoin/stats (BTC market cap, volume, supply)
+// ══════════════════════════════════════════════════
+async function fetchPrices() {
+  let btcFromCG = false;
+
+  // Primary: CoinGecko
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,kaspa');
+    if (res.ok) {
+      const d = await res.json();
+      if (Array.isArray(d)) {
+        const btc = d.find(c => c.id === 'bitcoin');
+        const kas = d.find(c => c.id === 'kaspa');
+        if (btc) {
+          btcFromCG = true;
+          btcPrice = btc.current_price || btcPrice;
+          if (btc.market_cap)         setEl('btc-market-cap',  btc.market_cap >= 1e12 ? '$' + (btc.market_cap / 1e12).toFixed(2) + 'T' : '$' + (btc.market_cap / 1e9).toFixed(2) + 'B');
+          if (btc.total_volume)       setEl('btc-volume',      fmtUSD(btc.total_volume));
+          if (btc.circulating_supply) setEl('btc-circ-supply', (btc.circulating_supply / 1e6).toFixed(3) + 'M BTC');
+        }
+        if (kas) {
+          kasPrice = kas.current_price || kasPrice;
+          if (kas.market_cap)         setEl('kas-market-cap',  kas.market_cap >= 1e12 ? '$' + (kas.market_cap / 1e12).toFixed(2) + 'T' : '$' + (kas.market_cap / 1e9).toFixed(2) + 'B');
+          if (kas.total_volume)       setEl('kas-volume',      fmtUSD(kas.total_volume));
+          if (kas.circulating_supply) setEl('kas-circ-supply', (kas.circulating_supply / 1e9).toFixed(2) + 'B KAS');
+          if (kas.max_supply)         setEl('kas-max-supply',  (kas.max_supply / 1e9).toFixed(2) + 'B KAS');
+        }
+      }
+    }
+  } catch {}
+
+  // BTC fallbacks if CoinGecko failed
+  if (!btcFromCG) {
+    // Price fallback: Blockchain.com ticker
+    try {
+      const res = await fetch('https://blockchain.info/ticker');
+      if (res.ok) {
+        const d = await res.json();
+        const p = d?.USD?.last;
+        if (p) btcPrice = p;
+      }
+    } catch {}
+
+    // Market data fallback: Blockchair /bitcoin/stats
+    try {
+      const res = await fetch('https://api.blockchair.com/bitcoin/stats');
+      if (res.ok) {
+        const d = await res.json();
+        const s = d?.data;
+        if (s) {
+          if (!btcPrice && s.market_price_usd) btcPrice = s.market_price_usd;
+          if (s.market_cap_usd)  setEl('btc-market-cap',  s.market_cap_usd >= 1e12 ? '$' + (s.market_cap_usd / 1e12).toFixed(2) + 'T' : '$' + (s.market_cap_usd / 1e9).toFixed(2) + 'B');
+          if (s.volume_24h)      setEl('btc-volume',      fmtUSD(s.volume_24h * btcPrice));
+          if (s.circulation)     setEl('btc-circ-supply', (s.circulation / 1e8 / 1e6).toFixed(3) + 'M BTC');
+        }
+      }
+    } catch {}
+  }
+}
+
+// ══════════════════════════════════════════════════
+// FETCH KAS MARKET DATA
+// Market cap, volume, circulating supply, max supply
+// are now all sourced from CoinGecko in fetchPrices().
+// This function fetches a KAS price fallback from
+// api.kaspa.org in case CoinGecko is unavailable.
+// ══════════════════════════════════════════════════
+async function fetchKASMarketData() {
+  try {
+    const res = await fetch('https://api.kaspa.org/info/price');
+    if (res.ok) {
+      const d = await res.json();
+      const p = parseFloat(d?.price);
+      if (p && kasPrice === 0.032) kasPrice = p; // only use fallback if CoinGecko didn't set it
+    }
+  } catch(e) {
+    // silently fail
+  }
+}
+
+// ══════════════════════════════════════════════════
+// FETCH KAS FEE ESTIMATE (api.kaspa.org)
+// ══════════════════════════════════════════════════
+async function fetchKASFeeEstimate() {
+  try {
+    const res = await fetch('https://api.kaspa.org/info/fee-estimate');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+// ══════════════════════════════════════════════════
+// FETCH KAS TX COUNT (api.kaspa.org)
+// Tries /transactions/count/last-day first (requires TRANSACTION_COUNT flag on server),
+// falls back to blockdag tx volume estimate via /info/network
+// ══════════════════════════════════════════════════
+async function fetchKASTxCount() {
+  try {
+    // Fetch yesterday's full UTC day for a real 24h count
+    const yesterday = new Date(Date.now() - 86400000);
+    const yyyy = yesterday.getUTCFullYear();
+    const mm = String(yesterday.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(yesterday.getUTCDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const res = await fetch(`https://api.kaspa.org/transactions/count/${dateStr}`);
+    if (res.ok) {
+      const d = await res.json();
+      // Response: { timestamp, dateTime, coinbase, regular }
+      const regular = d?.regular ?? null;
+      const coinbase = d?.coinbase ?? null;
+      if (regular != null) return { regular: Number(regular), coinbase: Number(coinbase ?? 0), date: dateStr };
+    }
+  } catch {}
+  return null;
+}
+
+// ══════════════════════════════════════════════════
+// FETCH BTC FEE DATA
+// Primary:  mempool.space /mining/blocks/fees
+// Fallback: Blockchair /bitcoin/stats (24h aggregate)
+// ══════════════════════════════════════════════════
+async function fetchBTCFees(period) {
+  // Primary: mempool.space
+  try {
+    const r = await fetch(`https://mempool.space/api/v1/mining/blocks/fees/${MS_PERIOD[period]}`);
+    if (r.ok) {
+      const blocks = await r.json();
+      if (Array.isArray(blocks) && blocks.length) {
+        const totalSats = blocks.reduce((a,b)=>a+(b.avgFees||0),0);
+        const totalBTC = totalSats/1e8;
+        const blockCount = blocks.length || 1;
+        const realTxCount = blocks.reduce((a,b)=>a+(b.txCount||b.tx_count||0),0);
+        const estTotalTxs = realTxCount > 0 ? realTxCount : blockCount * 2500;
+        return { blocks, totalSats, totalBTC, totalUSD: totalBTC*btcPrice, blockCount, estTotalTxs, isRealTxCount: realTxCount > 0 };
+      }
+    }
+  } catch {}
+
+  // Fallback: Blockchair /bitcoin/stats
+  // Returns 24h aggregate fees; scale to requested period
+  try {
+    const r = await fetch('https://api.blockchair.com/bitcoin/stats');
+    if (r.ok) {
+      const d = await r.json();
+      const s = d?.data;
+      if (s) {
+        const days = DAYS[period];
+        // fee_total_24h is in satoshis
+        const sats24h = s.fee_total_24h ?? s.fees_24h ?? 0;
+        const totalSats = sats24h * days;
+        const totalBTC = totalSats / 1e8;
+        // transactions_24h for tx count
+        const txs24h = s.transactions_24h ?? 300000;
+        const estTotalTxs = Math.round(txs24h * days);
+        return { blocks: [], totalSats, totalBTC, totalUSD: totalBTC * btcPrice, blockCount: Math.round(144 * days), estTotalTxs, isRealTxCount: false };
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+// ══════════════════════════════════════════════════
+// COMPUTE BTC BLOCK REWARDS
+// ══════════════════════════════════════════════════
+function computeBTCRewards(period) {
+  const days = DAYS[period];
+  const totalBTC = BTC_REWARD * BTC_BLOCKS_PER_DAY * days;
+  return { totalBTC, totalUSD: totalBTC * btcPrice };
+}
+
+// ══════════════════════════════════════════════════
+// COMPUTE KAS BLOCK REWARDS
+// ══════════════════════════════════════════════════
+function computeKASRewards(period) {
+  const days = DAYS[period];
+  const { perSec } = kaspaRewardPerBlock();
+  // KAS emits perSec KAS every second
+  const totalKAS = perSec * 86400 * days;
+  return { totalKAS, totalUSD: totalKAS * kasPrice, perSec };
+}
+
+// ══════════════════════════════════════════════════
+// KAS FEES — coinbase sampling (Option 2)
+// ──────────────────────────────────────────────────
+// The Kaspa REST API has no aggregate "fees collected"
+// endpoint. Fees are embedded in each block's coinbase
+// transaction: coinbase_output = block_reward + fees.
+// We fetch a sample of recent blocks, subtract the
+// known block reward from each coinbase output, then
+// extrapolate the average fee/block to a full day.
+// ══════════════════════════════════════════════════
+let kasDailyTxCount = null; // populated from api.kaspa.org
+let kasFeeRateKAS = 0.0002; // display-only sompi/gram fallback; updated from fee-estimate
+
+// Cached result so all period tabs share the same sample
+let _kasFeeSampleCache = null; // { avgFeePerBlockKAS, sampledAt, sampleSize }
+const KAS_FEE_SAMPLE_TTL = 4 * 60 * 1000; // re-sample at most every 4 min
+
+async function sampleKASFeesFromCoinbase() {
+  const now = Date.now();
+  // Return cached value if still fresh
+  if (_kasFeeSampleCache && (now - _kasFeeSampleCache.sampledAt) < KAS_FEE_SAMPLE_TTL) {
+    return _kasFeeSampleCache;
+  }
+
+  try {
+    // Step 1 — get a recent chain-block hash to use as the starting point.
+    // /blocks/get-blocks?lowHash=<hash>&includeTransactions=true&limit=N
+    // We use the virtual chain tip from /info/blockdag.
+    const dagRes = await fetch('https://api.kaspa.org/info/blockdag');
+    if (!dagRes.ok) throw new Error('blockdag fetch failed');
+    const dagInfo = await dagRes.json();
+    const tipHash = dagInfo?.tipHashes?.[0] ?? null;
+    if (!tipHash) throw new Error('no tip hash');
+
+    // Step 2 — fetch a page of blocks (default limit=10 without transactions is fast;
+    // we need transactions so we use includeTransactions=true and keep limit small
+    // to avoid large payloads — 100 blocks at 10 BPS = 10 seconds of network data).
+    const blocksRes = await fetch(
+      `https://api.kaspa.org/blocks?lowHash=${tipHash}&includeTransactions=true`
+    );
+    if (!blocksRes.ok) throw new Error('blocks fetch failed');
+    const blocks = await blocksRes.json();
+    if (!Array.isArray(blocks) || blocks.length === 0) throw new Error('no blocks returned');
+
+    // Step 3 — for each block, extract the coinbase tx (index 0) output total,
+    // then subtract the known block reward to get actual fees collected.
+    const BPS = 10;
+    let totalFeeSompi = 0;
+    let validCount = 0;
+
+    for (const block of blocks) {
+      const txs = block.transactions;
+      if (!Array.isArray(txs) || txs.length === 0) continue;
+
+      // Coinbase is always the first transaction; it has no inputs.
+      const coinbaseTx = txs[0];
+      if (!Array.isArray(coinbaseTx.outputs) || coinbaseTx.outputs.length === 0) continue;
+
+      // Sum all coinbase outputs (in sompi)
+      const coinbaseSompi = coinbaseTx.outputs.reduce((acc, o) => {
+        const amt = Number(o.amount ?? o.value?.amount ?? 0);
+        return acc + amt;
+      }, 0);
+
+      // Derive the block's timestamp to look up the correct emission rate
+      const blockTimeMs = block.header?.timestamp
+        ? Number(block.header.timestamp)
+        : now;
+      const { perBlock } = kaspaRewardPerBlock(blockTimeMs);
+      const rewardSompi = Math.round(perBlock * 1e8); // KAS → sompi
+
+      // fees = coinbase_output − block_reward  (clamp to 0 — red blocks may underreport)
+      const feeSompi = Math.max(0, coinbaseSompi - rewardSompi);
+      totalFeeSompi += feeSompi;
+      validCount++;
+    }
+
+    if (validCount === 0) throw new Error('no valid coinbase data');
+
+    const avgFeePerBlockKAS = (totalFeeSompi / validCount) / 1e8;
+
+    _kasFeeSampleCache = {
+      avgFeePerBlockKAS,
+      sampledAt: now,
+      sampleSize: validCount,
+      source: 'coinbase',
+    };
+    return _kasFeeSampleCache;
+
+  } catch (err) {
+    // Fallback: use fee-estimate × average tx mass × avg txs/block
+    // This is the old estimation path, kept as a safety net.
+    const txPerDay = kasDailyTxCount || (10 * 3 * 86400);
+    const avgFeePerBlockKAS = (txPerDay * kasFeeRateKAS) / (10 * 86400);
+    _kasFeeSampleCache = {
+      avgFeePerBlockKAS,
+      sampledAt: now,
+      sampleSize: 0,
+      source: 'estimate',
+    };
+    return _kasFeeSampleCache;
+  }
+}
+
+async function computeKASFees(period) {
+  const days = DAYS[period];
+  const sample = await sampleKASFeesFromCoinbase();
+  const blocksPerDay = 10 * 86400; // 864,000
+  const totalKAS = sample.avgFeePerBlockKAS * blocksPerDay * days;
+  return {
+    totalKAS,
+    totalUSD: totalKAS * kasPrice,
+    source: sample.source,
+    sampleSize: sample.sampleSize,
+  };
+}
+
+// ══════════════════════════════════════════════════
+// BUILD CHART DATA
+// ══════════════════════════════════════════════════
+function buildChartData(btcBlocks, btcRewards, btcFees, kasRewards, kasFees, period) {
+  const bucketMs = period==='1d' ? 3600000 : 86400000;
+  const groups = {};
+  (btcBlocks||[]).forEach(b=>{
+    const k = Math.floor(b.timestamp*1000/bucketMs)*bucketMs;
+    if(!groups[k]) groups[k]={feeUSD:0,feeBTC:0,count:0};
+    groups[k].feeUSD += (b.avgFees||0)/1e8*btcPrice;
+    groups[k].feeBTC += (b.avgFees||0)/1e8;
+    groups[k].count++;
+  });
+  const sorted = Object.entries(groups).sort((a,b)=>a[0]-b[0]);
+  const labels = sorted.map(([ts])=>{
+    const d=new Date(+ts);
+    return period==='1d'
+      ? d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})
+      : d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  });
+  const n = sorted.length || 1;
+  const days = DAYS[period];
+  const { perSec } = kaspaRewardPerBlock();
+
+  const btcRewardPerBucket = (BTC_REWARD * BTC_BLOCKS_PER_DAY * days / n) * btcPrice;
+  const btcFeePerBucket = sorted.map(([,v])=>v.feeUSD);
+  const btcTotalPerBucket = sorted.map(([,v],i)=>btcRewardPerBucket + v.feeUSD);
+  const kasRewardPerBucket = perSec * (period==='1d'?3600:86400) * kasPrice;
+  const kasFeePerBucket = (kasFees.totalUSD/n);
+  const kasTotalPerBucket = sorted.map(()=>kasRewardPerBucket + kasFeePerBucket);
+
+
+  const btcRewardNativePerBucket = (BTC_REWARD * BTC_BLOCKS_PER_DAY * days / n);
+  const btcFeeNativePerBucket = sorted.map(([,v])=>v.feeBTC);
+  const btcTotalNativePerBucket = sorted.map(([,v],i)=>btcRewardNativePerBucket + v.feeBTC);
+
+  const kasRewardNativePerBucket = perSec * (period==='1d'?3600:86400);
+  const kasFeeNativePerBucket = (kasFees.totalKAS/n);
+  const kasTotalNativePerBucket = sorted.map(()=>kasRewardNativePerBucket + kasFeeNativePerBucket);
+
+  const kasFeePerBucketArr = sorted.map(()=>kasFeePerBucket);
+
+  return {
+    labels,
+    btcTotal: btcTotalPerBucket,
+    btcFees: btcFeePerBucket,
+    kasTotal: kasTotalPerBucket,
+    kasFees: kasFeePerBucketArr,
+    btcTotalNative: btcTotalNativePerBucket,
+    kasTotalNative: kasTotalNativePerBucket,
+  };
+}
+
+// ══════════════════════════════════════════════════
+// UPDATE CHART
+// ══════════════════════════════════════════════════
+function makeChartOptions(tooltipBg, tooltipBorder, tooltipTitle, tooltipBody, gridCol, tickCol, yCallback, tooltipFmt) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode:'index', intersect:false },
+    plugins: {
+      legend: { display:false },
+      tooltip: {
+        backgroundColor: tooltipBg,
+        borderColor: tooltipBorder,
+        borderWidth: 1,
+        titleColor: tooltipTitle,
+        bodyColor: tooltipBody,
+        callbacks: { label: c => tooltipFmt(c.dataset.label, c.parsed.y) }
+      }
+    },
+    scales: {
+      x: { ticks:{ color:tickCol, font:{family:"'Space Mono'",size:10}, maxTicksLimit:10, autoSkip:true }, grid:{color:gridCol} },
+      y: { type:'linear', position:'left', ticks:{ color:tickCol, font:{family:"'Space Mono'",size:10}, callback: yCallback }, grid:{color:gridCol} }
+    }
+  };
+}
+
+function updateChart(data, period) {
+  if (!document.getElementById('btcChart') || !document.getElementById('kasChart')) return;
+  if(btcChart) btcChart.destroy();
+  if(kasChart) kasChart.destroy();
+
+  const { labels, btcTotal, btcFees, kasTotal, kasFees, btcTotalNative, kasTotalNative } = data;
+  const gridCol    = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  const tickCol    = isDark ? '#5a6278' : '#8492aa';
+  const tooltipBg  = isDark ? '#181e2b' : '#ffffff';
+  const tooltipBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)';
+  const tooltipTitle  = isDark ? '#5a6278' : '#8492aa';
+  const tooltipBody   = isDark ? '#e8eaf0' : '#111827';
+
+  let btcDatasets, kasDatasets, yCallback, tooltipFmt;
+
+  if(chartMode === 'usd') {
+    const btcRewards = btcTotal.map((t,i) => t - btcFees[i]);
+    const kasRewards = kasTotal.map((t,i) => t - kasFees[i]);
+    btcDatasets = [
+      { label:'Rewards', data:btcRewards, backgroundColor:'rgba(247,147,26,0.85)', borderColor:'#f7931a', borderWidth:1, borderRadius:3, stack:'s' },
+      { label:'Fees',    data:btcFees,    backgroundColor:'rgba(247,147,26,0.35)', borderColor:'rgba(247,147,26,0.6)', borderWidth:1, borderRadius:3, stack:'s' },
+    ];
+    kasDatasets = [
+      { label:'Rewards', data:kasRewards, backgroundColor:'rgba(73,222,176,0.85)', borderColor:'#49deb0', borderWidth:1, borderRadius:3, stack:'s' },
+      { label:'Fees',    data:kasFees,    backgroundColor:'rgba(73,222,176,0.35)', borderColor:'rgba(73,222,176,0.6)', borderWidth:1, borderRadius:3, stack:'s' },
+    ];
+    yCallback  = v => fmtUSD(v);
+    tooltipFmt = (ds, v) => ` ${ds}: ${fmtUSD(v)}`;
+  } else if(chartMode === 'pct') {
+    const btcPct = btcTotal.map((t,i) => t>0 ? btcFees[i]/t*100 : 0);
+    const kF = lastData?.kasF ?? { totalUSD: 0, totalKAS: 0 };
+    const kR = computeKASRewards(period);
+    const kasPctVal = (kF.totalUSD+kR.totalUSD)>0 ? kF.totalUSD/(kF.totalUSD+kR.totalUSD)*100 : 0;
+    const kasPct = kasTotal.map(() => kasPctVal);
+    btcDatasets = [{ label:'Fee %', data:btcPct, backgroundColor:'rgba(247,147,26,0.8)', borderColor:'#f7931a', borderWidth:1, borderRadius:3 }];
+    kasDatasets = [{ label:'Fee %', data:kasPct, backgroundColor:'rgba(73,222,176,0.8)', borderColor:'#49deb0', borderWidth:1, borderRadius:3 }];
+    yCallback  = v => v.toFixed(1)+'%';
+    tooltipFmt = (ds, v) => ` ${ds}: ${v.toFixed(2)}%`;
+  } else {
+    btcDatasets = [{ label:'Budget (BTC)', data:btcTotalNative, backgroundColor:'rgba(247,147,26,0.85)', borderColor:'#f7931a', borderWidth:1, borderRadius:3 }];
+    kasDatasets = [{ label:'Budget (KAS)', data:kasTotalNative, backgroundColor:'rgba(73,222,176,0.85)', borderColor:'#49deb0', borderWidth:1, borderRadius:3 }];
+    yCallback  = v => v.toFixed(1)+'₿';
+    const kasYCb = v => Math.round(v).toLocaleString()+' KAS';
+    tooltipFmt = (ds, v) => ds.includes('BTC') ? ` ${ds}: ${v.toFixed(2)} ₿` : ` ${ds}: ${Math.round(v).toLocaleString()} KAS`;
+
+    // Native uses separate y-axis scales per chart
+    const btcCtx = document.getElementById('btcChart').getContext('2d');
+    const kasCtx = document.getElementById('kasChart').getContext('2d');
+    const baseOpts = { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:tooltipBg, borderColor:tooltipBorder, borderWidth:1, titleColor:tooltipTitle, bodyColor:tooltipBody, callbacks:{ label: c => tooltipFmt(c.dataset.label, c.parsed.y) } } } };
+    btcChart = new Chart(btcCtx, { type:'bar', data:{labels, datasets:btcDatasets}, options:{ ...baseOpts, scales:{ x:{ticks:{color:tickCol,font:{family:"'Space Mono'",size:10},maxTicksLimit:10,autoSkip:true},grid:{color:gridCol}}, y:{ticks:{color:'#f7931a',font:{family:"'Space Mono'",size:10},callback:yCallback},grid:{color:gridCol}} } } });
+    kasChart = new Chart(kasCtx, { type:'bar', data:{labels, datasets:kasDatasets}, options:{ ...baseOpts, scales:{ x:{ticks:{color:tickCol,font:{family:"'Space Mono'",size:10},maxTicksLimit:10,autoSkip:true},grid:{color:gridCol}}, y:{ticks:{color:'#49deb0',font:{family:"'Space Mono'",size:10},callback:kasYCb},grid:{color:gridCol}} } } });
+    return;
+  }
+
+  const opts = makeChartOptions(tooltipBg, tooltipBorder, tooltipTitle, tooltipBody, gridCol, tickCol, yCallback, tooltipFmt);
+  const yAxisLabel = chartMode === 'usd' ? 'USD ($)' : chartMode === 'pct' ? 'Fee %' : null;
+  [opts].forEach(o => {
+    if (yAxisLabel) {
+      o.scales.y.title = { display: true, text: yAxisLabel, color: tickCol, font: { family: "'Space Mono'", size: 10 } };
+    }
+  });
+  btcChart = new Chart(document.getElementById('btcChart').getContext('2d'), { type:'bar', data:{labels, datasets:btcDatasets}, options: JSON.parse(JSON.stringify(opts)) });
+  kasChart = new Chart(document.getElementById('kasChart').getContext('2d'), { type:'bar', data:{labels, datasets:kasDatasets}, options: JSON.parse(JSON.stringify(opts)) });
+}
+
+// ══════════════════════════════════════════════════
+// ANIMATE BREAKDOWN BARS
+// ══════════════════════════════════════════════════
+function updateBreakdownBars(btcRewardUSD, btcFeeUSD, kasRewardUSD, kasFeeUSD) {
+  const btcTotal=btcRewardUSD+btcFeeUSD;
+  const kasTotal=kasRewardUSD+kasFeeUSD;
+  const btcRPct=btcTotal>0?(btcRewardUSD/btcTotal*100):99;
+  const btcFPct=btcTotal>0?(btcFeeUSD/btcTotal*100):1;
+  const kasRPct=kasTotal>0?(kasRewardUSD/kasTotal*100):99;
+  const kasFPct=kasTotal>0?(kasFeeUSD/kasTotal*100):1;
+
+  setTimeout(()=>{
+    document.getElementById('btc-reward-bar').style.width=btcRPct+'%';
+    document.getElementById('btc-fee-bar').style.width=btcFPct+'%';
+    document.getElementById('kas-reward-bar').style.width=kasRPct+'%';
+    document.getElementById('kas-fee-bar').style.width=kasFPct+'%';
+  },100);
+
+  setEl('btc-reward-val',`<span class="val-btc">${fmtUSD(btcRewardUSD)}</span>`);
+  setEl('btc-fee-val',fmtUSD(btcFeeUSD));
+  setEl('kas-reward-val',`<span class="val-kas">${fmtUSD(kasRewardUSD)}</span>`);
+  setEl('kas-fee-val',fmtUSD(kasFeeUSD));
+}
+
+// ══════════════════════════════════════════════════
+// EMISSION EVENT CALCULATIONS
+// ══════════════════════════════════════════════════
+let btcCurrentHeight = null;
+
+async function fetchBTCBlockHeight() {
+  // Primary: mempool.space
+  try {
+    const res = await fetch('https://mempool.space/api/blocks/tip/height');
+    if (res.ok) {
+      const h = parseInt(await res.text());
+      if (h > 0) { btcCurrentHeight = h; return; }
+    }
+  } catch {}
+  // Fallback: Blockchair /bitcoin/stats
+  try {
+    const res = await fetch('https://api.blockchair.com/bitcoin/stats');
+    if (res.ok) {
+      const d = await res.json();
+      const h = d?.data?.blocks;
+      if (h > 0) btcCurrentHeight = h;
+    }
+  } catch {}
+}
+
+function btcBlocksUntilHalving() {
+  if (!btcCurrentHeight) return null;
+  const HALVING_INTERVAL = 210000;
+  const nextHalving = Math.ceil(btcCurrentHeight / HALVING_INTERVAL) * HALVING_INTERVAL;
+  return nextHalving - btcCurrentHeight;
+}
+
+function kasNextReductionDays() {
+  const now = Date.now();
+  // Find the next phase start that is strictly in the future
+  for (let i = 0; i < KAS_EMISSION_PHASES.length; i++) {
+    if (KAS_EMISSION_PHASES[i].ts > now) {
+      return Math.ceil((KAS_EMISSION_PHASES[i].ts - now) / (1000 * 60 * 60 * 24));
+    }
+  }
+  return null; // past last scheduled phase (emissions ended)
+}
+
+// ══════════════════════════════════════════════════
+// UPDATE TABLE
+// ══════════════════════════════════════════════════
+function updateTable(btcR, btcF, kasR, kasF, period) {
+  const days=DAYS[period];
+  const btcTotal=btcR.totalUSD+btcF.totalUSD;
+  const kasTotal=kasR.totalUSD+kasF.totalUSD;
+  const ratio=kasTotal>0?(btcTotal/kasTotal).toFixed(0):0;
+  const btcFeeShare=btcTotal>0?(btcF.totalUSD/btcTotal*100).toFixed(1)+'%':'—';
+  const kasFeeShare=kasTotal>0?(kasF.totalUSD/kasTotal*100).toFixed(2)+'%':'—';
+
+  // BTC next halving
+  const blocksLeft = btcBlocksUntilHalving();
+  const btcEmission = blocksLeft !== null
+    ? `<span class="val-btc">Halving in ~${blocksLeft.toLocaleString()} blocks (~${Math.round(blocksLeft/144)} days)</span>`
+    : `<span class="val-muted">Halving ~Apr 2028</span>`;
+
+  // KAS next monthly reduction
+  const kasdays = kasNextReductionDays();
+  const kasEmission = kasdays !== null
+    ? `<span class="val-kas">Monthly reduction in ${kasdays} day${kasdays===1?'':'s'}</span>`
+    : `<span class="val-muted">Emissions concluded</span>`;
+
+  const rows=[
+    ['Security Budget (USD)',`<span class="val-btc">${fmtUSD(btcTotal)}</span>`,`<span class="val-kas">${fmtUSD(kasTotal)}</span>`],
+    ['Block Rewards (USD)',`<span class="val-btc">${fmtUSD(btcR.totalUSD)}</span>`,`<span class="val-kas">${fmtUSD(kasR.totalUSD)}</span>`],
+    ['Fees (USD)',`<span class="val-btc">${fmtUSD(btcF.totalUSD)}</span>`,`<span class="val-kas">${fmtUSD(kasF.totalUSD)}</span> <span class="tag fee">${kasF.source === 'coinbase' ? 'coinbase' : 'est.'}</span>`],
+    ['Fee % of budget',`<span class="val-btc">${btcFeeShare}</span>`,`<span class="val-kas">${kasFeeShare}</span>`],
+    ['Block Rewards (native)',`<span class="val-btc">${fmtBTC(btcR.totalBTC)}</span>`,`<span class="val-kas">${fmtKAS(kasR.totalKAS)}</span>`],
+    ['Fees (native)',`<span class="val-btc">${fmtBTC(btcF.totalBTC||0)}</span>`,`<span class="val-kas">${fmtKAS(kasF.totalKAS||0)}</span>`],
+    ['Per day avg (USD)',`<span class="val-btc">${fmtUSD(btcTotal/days)}</span>`,`<span class="val-kas">${fmtUSD(kasTotal/days)}</span>`],
+    ['BTC price used',`<span class="val-btc">$${Math.round(btcPrice).toLocaleString()}</span>`,'—'],
+    ['KAS price used','—',`<span class="val-kas">$${kasPrice.toFixed(4)}</span>`],
+    ['Block reward / block','<span class="val-btc">3.125 BTC</span>',`<span class="val-kas">${kaspaRewardPerBlock().perBlock.toFixed(3)} KAS</span>`],
+    ['Next emission event', btcEmission, kasEmission],
+  ];
+
+  document.getElementById('metrics-body').innerHTML=rows.map(([m,b,k])=>`
+    <tr>
+      <td style="color:var(--muted);font-size:11px">${m}</td>
+      <td>${b}</td>
+      <td>${k}</td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════
+// HASHRATE HISTORY CHART
+// ══════════════════════════════════════════════════
+
+
+// mempool.space hashrate endpoint accepts: 1m, 3m, 6m, 1y, 2y, 3y
+// For 5y we fetch 3y and supplement with computed fallback older data
+// Kaspa launched mainnet Nov 2021. We synthesise KAS hashrate history from
+// on-chain difficulty data via api.kaspa.org.
+// KAS hashrate (H/s) ≈ difficulty * 2 (Blake3 target, ~1 BPS net when accounting for DAG width)
+// At 10 BPS the relationship is: hashrate ≈ difficulty * 2 * BPS
+
+// ══════════════════════════════════════════════════
+// MINING STATS
+// ══════════════════════════════════════════════════
+
+function fmtHashrate(hps) {
+  if (!hps) return '—';
+  if (hps >= 1e18) return (hps/1e18).toFixed(2) + ' EH/s';
+  if (hps >= 1e15) return (hps/1e15).toFixed(2) + ' PH/s';
+  if (hps >= 1e12) return (hps/1e12).toFixed(2) + ' TH/s';
+  if (hps >= 1e9)  return (hps/1e9).toFixed(2)  + ' GH/s';
+  return hps.toFixed(0) + ' H/s';
+}
+
+function fmtDifficulty(d) {
+  if (!d) return '—';
+  if (d >= 1e12) return (d/1e12).toFixed(2) + 'T';
+  if (d >= 1e9)  return (d/1e9).toFixed(2)  + 'G';
+  if (d >= 1e6)  return (d/1e6).toFixed(2)  + 'M';
+  return d.toFixed(0);
+}
+
+// BTC pool colors — consistent palette
+const BTC_POOL_COLORS = [
+  '#f7931a','#e07010','#c85800','#a84000','#883000',
+  '#ffa840','#ffbd60','#ffd080','#ffe4a0','#fff8d0'
+];
+const KAS_POOL_COLORS = [
+  '#49deb0','#30b890','#1a9270','#0e7058','#065040',
+  '#70e8c0','#90f0d0','#b0f8e0','#c8fced','#e0fff8'
+];
+
+// ══════════════════════════════════════════════════
+// KAS POOL DISTRIBUTION — live fetch from pool APIs
+// ══════════════════════════════════════════════════
+//
+// Each entry describes how to extract a hashrate (H/s) from a pool's
+// public stats endpoint.  extractor(json) must return a number in H/s,
+// or null if the shape is unexpected.
+//
+// All pools expose CORS-friendly JSON endpoints (verified public APIs).
+// Hashrate units vary per pool — extractor normalises to H/s.
+const KAS_POOL_APIS = [
+  {
+    name: 'Herominers',
+    url:  'https://kaspa.herominers.com/api/stats',
+    extractor: d => {
+      // { hashrate: N }  in H/s
+      const hr = d?.hashrate ?? d?.pool_hashrate ?? d?.poolHashrate ?? null;
+      return hr != null ? parseFloat(hr) : null;
+    }
+  },
+  {
+    name: 'Woolypooly',
+    url:  'https://api.woolypooly.com/api/kas-1/stats',
+    extractor: d => {
+      // { hashrate: N } in H/s
+      const hr = d?.hashrate ?? d?.pool?.hashrate ?? null;
+      return hr != null ? parseFloat(hr) : null;
+    }
+  },
+  {
+    name: 'K1Pool',
+    url:  'https://k1pool.com/api/pool/kas',
+    extractor: d => {
+      // { hashrate: N } in H/s
+      const hr = d?.hashrate ?? d?.pool_hashrate ?? null;
+      return hr != null ? parseFloat(hr) : null;
+    }
+  },
+  {
+    name: '2Miners',
+    url:  'https://kas.2miners.com/api/stats',
+    extractor: d => {
+      // { hashrate: N } in H/s
+      const hr = d?.hashrate ?? d?.poolHashrate ?? null;
+      return hr != null ? parseFloat(hr) : null;
+    }
+  },
+  {
+    name: 'Acepool',
+    url:  'https://acepool.top/api/pool/stats?coin=kas',
+    extractor: d => {
+      const hr = d?.hashrate ?? d?.poolHashrate ?? d?.pool_hashrate ?? null;
+      return hr != null ? parseFloat(hr) : null;
+    }
+  },
+  {
+    name: 'F2Pool',
+    url:  'https://api.f2pool.com/kaspa/stats',
+    extractor: d => {
+      // { hashes_per_second: N } or { hashrate: N }
+      const hr = d?.hashes_per_second ?? d?.hashrate ?? null;
+      return hr != null ? parseFloat(hr) : null;
+    }
+  },
+  {
+    name: 'Antpool',
+    url:  'https://antpool.com/api/poolStats.htm?coin=KAS',
+    extractor: d => {
+      // { code: 0, data: { poolHashrate: "NTH" } } — TH/s
+      const raw = d?.data?.poolHashrate ?? d?.data?.hashrate ?? null;
+      if (raw == null) return null;
+      const n = parseFloat(raw);
+      // Antpool reports in TH/s for KAS
+      return isNaN(n) ? null : n * 1e12;
+    }
+  },
+  {
+    name: 'Rustpool',
+    url:  'https://rustpool.com/api/v1/pool/kaspa/stats',
+    extractor: d => {
+      const hr = d?.hashrate ?? d?.pool_hashrate ?? null;
+      return hr != null ? parseFloat(hr) : null;
+    }
+  },
+];
+
+// Current best-known fallback distribution (April 2026, ASIC era).
+// Adjusted from Herominers/Woolypooly dominance era to reflect
+// growth of Antpool / F2Pool post-KS3/KS5 ASIC proliferation.
+const KAS_POOL_FALLBACK = [
+  { name: 'Antpool',     pct: 21.0 },
+  { name: 'F2Pool',      pct: 16.5 },
+  { name: 'Herominers',  pct: 14.2 },
+  { name: 'Woolypooly',  pct: 11.8 },
+  { name: 'K1Pool',      pct:  9.4 },
+  { name: '2Miners',     pct:  7.6 },
+  { name: 'Acepool',     pct:  6.1 },
+  { name: 'Others',      pct: 13.4 },
+];
+
+async function fetchKASPoolDistribution(networkHashrateHps) {
+  const el = document.getElementById('kas-pool-list');
+  const srcEl = document.getElementById('kas-pool-source');
+
+  // Attempt to fetch each pool's hashrate with a short timeout
+  const TIMEOUT_MS = 5000;
+  const results = await Promise.allSettled(
+    KAS_POOL_APIS.map(async pool => {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      try {
+        const res = await fetch(pool.url, { signal: controller.signal });
+        clearTimeout(tid);
+        if (!res.ok) return { name: pool.name, hr: null };
+        const json = await res.json();
+        const hr = pool.extractor(json);
+        return { name: pool.name, hr: (hr != null && hr > 0) ? hr : null };
+      } catch {
+        clearTimeout(tid);
+        return { name: pool.name, hr: null };
+      }
+    })
+  );
+
+  const fetched = results.map(r => r.value || r.reason);
+  const successful = fetched.filter(p => p.hr != null);
+
+  // Determine the denominator for share calculation:
+  // Prefer the live network hashrate; fall back to sum of fetched pools * 1.15
+  // to account for pools we couldn't reach.
+  let usedLive = false;
+  let denom = 0;
+  if (networkHashrateHps && networkHashrateHps > 0) {
+    denom = networkHashrateHps;
+    usedLive = true;
+  } else if (successful.length > 0) {
+    denom = successful.reduce((a, p) => a + p.hr, 0) / 0.85; // ~85% coverage assumed
+  }
+
+  if (successful.length === 0 || denom === 0) {
+    // Full fallback — no live data at all
+    renderKASPools(KAS_POOL_FALLBACK, false);
+    if (srcEl) srcEl.textContent = 'estimated fallback';
+    return;
+  }
+
+  // Build pool rows from fetched data
+  const poolRows = fetched
+    .filter(p => p.hr != null)
+    .map(p => ({ name: p.name, pct: Math.min((p.hr / denom) * 100, 99) }))
+    .sort((a, b) => b.pct - a.pct);
+
+  // Compute Others as remainder (anything not covered by fetched pools)
+  const fetchedSum = poolRows.reduce((a, p) => a + p.pct, 0);
+  // Also add entries for pools that returned null (unknown share)
+  const failedNames = fetched.filter(p => p.hr == null).map(p => p.name);
+
+  const othersPct = Math.max(0, 100 - fetchedSum);
+  if (othersPct > 0.5 || failedNames.length > 0) {
+    const othersLabel = failedNames.length > 0
+      ? `Others incl. ${failedNames.slice(0,2).join(', ')}${failedNames.length>2?'…':''}`
+      : 'Others';
+    poolRows.push({ name: othersLabel, pct: parseFloat(othersPct.toFixed(1)) });
+  }
+
+  renderKASPools(poolRows, true);
+
+  const coveragePct = Math.round(fetchedSum);
+  if (srcEl) {
+    srcEl.textContent = usedLive
+      ? `${successful.length} pools · ${coveragePct}% coverage`
+      : `${successful.length} pools · estimated network`;
+  }
+}
+
+function renderKASPools(pools, isLive) {
+  const el = document.getElementById('kas-pool-list');
+  if (!el) return;
+  const html = pools.map((p, i) => {
+    const isOthers = i === pools.length - 1 && (p.name === 'Others' || p.name.startsWith('Others'));
+    const color = isOthers ? 'var(--muted)' : (KAS_POOL_COLORS[i] || KAS_POOL_COLORS[4]);
+    const pctDisplay = typeof p.pct === 'number' ? p.pct.toFixed(1) : p.pct;
+    return `<div class="pool-row">
+      <span class="pool-name" title="${p.name}">${p.name}</span>
+      <div class="pool-bar-wrap"><div class="pool-bar" style="width:${pctDisplay}%;background:${color}"></div></div>
+      <span class="pool-pct" style="color:${color}">${pctDisplay}%</span>
+    </div>`;
+  });
+  const note = isLive
+    ? `<div style="color:var(--muted);font-size:10px;margin-top:8px">Live hashrate from pool APIs ÷ network total. Pools that did not respond are grouped in Others.</div>`
+    : `<div style="color:var(--muted);font-size:10px;margin-top:8px">* Pool APIs unavailable — showing best-known estimates (Apr 2026).</div>`;
+  el.innerHTML = html.join('') + note;
+}
+
+async function fetchBTCMining() {
+  let gotHashrate = false;
+  let gotFeeRate  = false;
+  let gotTxCount  = false;
+
+  // Primary: mempool.space hashrate + fee rates
+  try {
+    const [hrRes, feeRes] = await Promise.all([
+      fetch('https://mempool.space/api/v1/mining/hashrate/3d'),
+      fetch('https://mempool.space/api/v1/fees/recommended')
+    ]);
+    const hrData  = hrRes.ok  ? await hrRes.json()  : null;
+    const feeData = feeRes.ok ? await feeRes.json() : null;
+
+    if (hrData?.difficulty?.length) {
+      gotHashrate = true;
+      const diff = hrData.difficulty[hrData.difficulty.length - 1].difficulty;
+      const hashrate_hs = diff * Math.pow(2, 32) / 600;
+      setEl('btc-hashrate', fmtHashrate(hashrate_hs));
+      setEl('btc-difficulty', fmtDifficulty(diff));
+    }
+
+    if (hrData?.difficulty?.length && hrData?.hashrates?.length) {
+      const diff = hrData.difficulty[hrData.difficulty.length - 1].difficulty;
+      const hr   = hrData.hashrates[hrData.hashrates.length - 1].avgHashrate;
+      const blockTimeSec = hr > 0 ? (diff * Math.pow(2, 32)) / hr : 600;
+      setEl('btc-blocktime', blockTimeSec.toFixed(0) + 's (~' + (blockTimeSec/60).toFixed(1) + ' min)');
+    } else {
+      setEl('btc-blocktime', '~600s (10 min)');
+    }
+
+    if (feeData?.halfHourFee) {
+      gotFeeRate = true;
+      const satsPerVbyte = feeData.halfHourFee;
+      const avgTxBytes = 250;
+      const satsPerTx = satsPerVbyte * avgTxBytes;
+      setEl('btc-fee-rate', '~' + satsPerTx.toLocaleString() + ' sats/tx');
+    }
+  } catch {}
+
+  // Primary: mempool.space tx count (last 24h blocks)
+  try {
+    const res = await fetch('https://mempool.space/api/v1/mining/blocks/sizes-weights/24h');
+    if (res.ok) {
+      const blocks = await res.json();
+      if (Array.isArray(blocks) && blocks.length) {
+        const total = blocks.reduce((a,b) => a + (b.txCount || b.tx_count || 0), 0);
+        if (total > 0) {
+          gotTxCount = true;
+          setEl('btc-tx-count', total.toLocaleString() + ' (prev 24h)');
+        }
+      }
+    }
+  } catch {}
+
+  // Fallback: Blockchair /bitcoin/stats covers hashrate, difficulty, fee rate, tx count
+  if (!gotHashrate || !gotFeeRate || !gotTxCount) {
+    try {
+      const res = await fetch('https://api.blockchair.com/bitcoin/stats');
+      if (res.ok) {
+        const d = await res.json();
+        const s = d?.data;
+        if (s) {
+          if (!gotHashrate) {
+            // hashrate_24h is in H/s
+            if (s.hashrate_24h) {
+              const hr = parseFloat(s.hashrate_24h);
+              setEl('btc-hashrate', fmtHashrate(hr));
+            }
+            if (s.difficulty) {
+              setEl('btc-difficulty', fmtDifficulty(s.difficulty));
+              const blockTimeSec = s.difficulty * Math.pow(2, 32) / (parseFloat(s.hashrate_24h) || 1);
+              setEl('btc-blocktime', blockTimeSec.toFixed(0) + 's (~' + (blockTimeSec/60).toFixed(1) + ' min)');
+            }
+          }
+          if (!gotFeeRate && s.suggested_transaction_fee_per_byte_sat) {
+            const satsPerTx = s.suggested_transaction_fee_per_byte_sat * 250;
+            setEl('btc-fee-rate', '~' + satsPerTx.toLocaleString() + ' sats/tx');
+          }
+          if (!gotTxCount && s.transactions_24h) {
+            setEl('btc-tx-count', Number(s.transactions_24h).toLocaleString() + ' (prev 24h)');
+          }
+        }
+      }
+    } catch {}
+  }
+}
+
+async function fetchKASMining() {
+  try {
+    const [infoRes, blockRes, feeEstRes, txCountRes] = await Promise.all([
+      fetch('https://api.kaspa.org/info/network'),
+      fetch('https://api.kaspa.org/info/blockdag'),
+      fetchKASFeeEstimate(),
+      fetchKASTxCount()
+    ]);
+    const info  = infoRes.ok  ? await infoRes.json()  : null;
+    const block = blockRes.ok ? await blockRes.json() : null;
+
+    // Hashrate — derived live from blockdag difficulty using official formula:
+    // hashrate (H/s) = difficulty * 2 * BPS  (BPS = 10, per kaspa-rest-server source)
+    if (block?.difficulty) {
+      const hashrate_hs = block.difficulty * 2 * 10;
+      setEl('kas-hashrate', fmtHashrate(hashrate_hs));
+    } else {
+      setEl('kas-hashrate', '—');
+    }
+
+    // Difficulty
+    if (block?.difficulty) {
+      setEl('kas-difficulty', fmtDifficulty(block.difficulty));
+    }
+
+    // DAA score (virtual DAA score = chain height proxy)
+    if (block?.virtualDaaScore) {
+      setEl('kas-daa', Number(block.virtualDaaScore).toLocaleString());
+    } else {
+      setEl('kas-daa', '—');
+    }
+
+    // Blue score / tip hashes
+    if (block?.tipHashes?.length) {
+      setEl('kas-tip-hashes', block.tipHashes.length.toString());
+    }
+
+    // Past median time (block timestamp proxy)
+    if (block?.pastMedianTime) {
+      const d = new Date(Number(block.pastMedianTime));
+      setEl('kas-median-time', d.toLocaleTimeString());
+    }
+
+    // Fee estimate from api.kaspa.org/info/fee-estimate
+    // Response: { priorityBucket: { feerate, estimatedSeconds }, normalBucket: {...}, lowBucket: {...} }
+    // feerate is in sompi/gram. Display normal bucket feerate directly in sompi/gram.
+    if (feeEstRes) {
+      const bucket = feeEstRes.normalBucket ?? feeEstRes.lowBucket ?? feeEstRes.priorityBucket;
+      const feerate = bucket?.feerate ?? bucket?.feeRate ?? null;
+      if (feerate != null) {
+        const fr = parseFloat(feerate);
+        // feerate is sompi/gram; typical tx ~2000 grams
+        const sompiPerTx = Math.round(fr * 2000);
+        const feePerTx = sompiPerTx / 1e8;
+        kasFeeRateKAS = feePerTx > 0 ? feePerTx : kasFeeRateKAS;
+        setEl('kas-fee-rate', `~${sompiPerTx.toLocaleString()} sompi/tx`);
+      } else {
+        setEl('kas-fee-rate', '—');
+      }
+    } else {
+      setEl('kas-fee-rate', '—');
+    }
+
+    // Tx count — live from /transactions/count/
+    if (txCountRes != null) {
+      const total = txCountRes.regular + txCountRes.coinbase;
+      kasDailyTxCount = txCountRes.regular;
+      setEl('kas-tx-count', txCountRes.regular.toLocaleString() + ' (prev 24h)');
+    } else {
+      // Fallback: estimate from networkTxCount in /info/network if available
+      const netTx = info?.transactionCount ?? info?.txCount ?? null;
+      if (netTx != null) {
+        setEl('kas-tx-count', Number(netTx).toLocaleString() + ' (est.)');
+      } else {
+        setEl('kas-tx-count', '—');
+      }
+    }
+
+  } catch(e) {
+    setEl('kas-hashrate', '—');
+  }
+}
+
+// ══════════════════════════════════════════════════
+// MAIN LOAD
+// ══════════════════════════════════════════════════
+async function loadAll() {
+  const btn=document.getElementById('refresh-btn');
+  btn.innerHTML='<span class="spin">↻</span> Loading';
+  btn.disabled=true;
+
+  try {
+    await fetchPrices();
+
+    const period=currentPeriod;
+    const days=DAYS[period];
+
+    const [btcFeeData, kasF] = await Promise.all([
+      fetchBTCFees(period),
+      computeKASFees(period),
+      fetchBTCMining(),
+      fetchKASMining(),
+      fetchKASMarketData(),
+      fetchBTCBlockHeight()
+    ]);
+
+    const hasError=!btcFeeData;
+    showError(hasError);
+
+    // Compute all components
+    const btcR = computeBTCRewards(period);
+    const btcF = btcFeeData
+      ? { totalBTC:btcFeeData.totalBTC, totalUSD:btcFeeData.totalUSD }
+      : { totalBTC:0, totalUSD:0 };
+    const kasR = computeKASRewards(period);
+    // kasF already resolved above via computeKASFees()
+
+    const btcTotal=btcR.totalUSD+btcF.totalUSD;
+    const kasTotal=kasR.totalUSD+kasF.totalUSD;
+
+    lastData = { btcR, btcF, kasR, kasF, btcBlocks:btcFeeData?.blocks||[], period };
+
+    // ── Price pills
+    setEl('btc-price-pill',`$${Math.round(btcPrice).toLocaleString()}`);
+    setEl('kas-price-pill',`$${kasPrice.toFixed(4)}`);
+    const { perSec, perBlock } = kaspaRewardPerBlock();
+    setEl('kas-reward-pill',`${perSec.toFixed(2)} KAS/s`);
+    setEl('kas-per-block',`${perBlock.toFixed(3)} KAS`);
+
+    // ── Hero cards
+    const pname=PERIOD_NAMES[period];
+    setEl('btc-budget-total',fmtUSD(btcTotal));
+    setEl('btc-budget-sub',`Rewards + Fees over ${pname}`);
+    setEl('kas-budget-total',fmtUSD(kasTotal));
+    setEl('kas-budget-sub',`Rewards + Fees over ${pname}`);
+
+    updateBreakdownBars(btcR.totalUSD, btcF.totalUSD, kasR.totalUSD, kasF.totalUSD);
+
+    // ── Dominance
+    const grand=btcTotal+kasTotal;
+    const btcPct=grand>0?(btcTotal/grand*100).toFixed(1):50;
+    const kasPct=grand>0?(kasTotal/grand*100).toFixed(1):50;
+    document.getElementById('dom-btc-bar').style.width=btcPct+'%';
+    document.getElementById('dom-kas-bar').style.width=kasPct+'%';
+    setEl('dom-btc-label',`BTC ${btcPct}%`);
+    setEl('dom-kas-label',`KAS ${kasPct}%`);
+    setEl('dom-sub',`BTC: ${fmtUSD(btcTotal)} · KAS: ${fmtUSD(kasTotal)} · Period: ${pname}`);
+
+    // ── Reward cards
+    const PERIOD_UNIT = { '1d':'Day', '1w':'Week', '1m':'Month' };
+    const BTC_BLOCKS = { '1d':'~144 blocks/day', '1w':'~1,008 blocks/week', '1m':'~4,320 blocks/month' };
+    const KAS_BLOCKS = { '1d':'~864,000 blocks/day', '1w':'~6,048,000 blocks/week', '1m':'~25,920,000 blocks/month' };
+    const punit = PERIOD_UNIT[period];
+    setEl('btc-reward-period-label', `BTC Reward / ${punit} (USD)`);
+    setEl('kas-reward-period-label', `KAS Reward / ${punit} (USD)`);
+    setEl('btc-blocks-sub', BTC_BLOCKS[period]);
+    setEl('kas-blocks-sub', KAS_BLOCKS[period]);
+    const btcRDay=BTC_REWARD*BTC_BLOCKS_PER_DAY*btcPrice*DAYS[period];
+    setEl('btc-reward-day',fmtUSD(btcRDay));
+    const kasRDay=perSec*86400*kasPrice*DAYS[period];
+    setEl('kas-reward-day',fmtUSD(kasRDay));
+
+    // ── Fee cards
+    setEl('btc-fee-usd',fmtUSD(btcF.totalUSD));
+    setEl('btc-fee-sub',`Over ${pname}`);
+    const btcFeePct=btcTotal>0?(btcF.totalUSD/btcTotal*100).toFixed(1):'0';
+    setEl('btc-fee-btc',fmtBTC(btcF.totalBTC)+(btcTotal>0?` · ${btcFeePct}%`:''));
+    setEl('kas-fee-usd',fmtUSD(kasF.totalUSD));
+    const kasFeeSrcLabel = kasF.source === 'coinbase'
+      ? `Over ${pname} · coinbase sample (${kasF.sampleSize} blocks)`
+      : `Over ${pname} (est.)`;
+    setEl('kas-fee-sub', kasFeeSrcLabel);
+    const kasFPct=kasTotal>0?(kasF.totalUSD/kasTotal*100).toFixed(2):'0';
+    setEl('kas-fee-kas',fmtKAS(kasF.totalKAS)+` · ${kasFPct}%`);
+
+    // ── BTC avg tx cost (total sats ÷ estimated total txs in period)
+    if (btcFeeData?.totalSats > 0) {
+      const avgSats = Math.round(btcFeeData.totalSats / btcFeeData.estTotalTxs);
+      setEl('btc-fee-rate', `~${avgSats.toLocaleString()} sats/tx`);
+      const btcTxPrefix = btcFeeData.isRealTxCount ? '' : '~';
+      setEl('btc-tx-count', `${btcTxPrefix}${btcFeeData.estTotalTxs.toLocaleString()} (prev 24h)`);
+    }
+    // ── Table
+    updateTable(btcR, btcF, kasR, kasF, period);
+
+    // ── Timestamp
+    setEl('ts','Updated '+new Date().toLocaleTimeString());
+
+    // ── Hashrate history charts
+    renderHrCharts();
+
+  } catch(e) {
+    console.error(e);
+    showError(true);
+  }
+
+  btn.innerHTML='↻ Refresh';
+  btn.disabled=false;
+}
+
+
+
+
+
+// ══════════════════════════════════════════════════
+// HASHRATE HISTORY — localStorage persistence
+// ══════════════════════════════════════════════════
+const HR_KEY_BTC = 'hr_history_btc';
+const HR_KEY_KAS = 'hr_history_kas';
+const HR_MAX_POINTS = 10000; // ~35 days at 5-min intervals
+
+let btcHrChart = null;
+let kasHrChart = null;
+let btcHrRange = 'all';
+let kasHrRange = 'all';
+
+function hrLoad(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { return []; }
+}
+
+function hrSave(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+}
+
+function hrAppend(key, value) {
+  if (value == null || isNaN(value) || value <= 0) return;
+  const data = hrLoad(key);
+  data.push({ t: Date.now(), v: value });
+  if (data.length > HR_MAX_POINTS) data.splice(0, data.length - HR_MAX_POINTS);
+  hrSave(key, data);
+}
+
+function hrFilter(data, range) {
+  if (range === 'all') return data;
+  const now = Date.now();
+  const cutoff = range === '24h' ? now - 86400000 : now - 7 * 86400000;
+  return data.filter(d => d.t >= cutoff);
+}
+
+function hrFormatLabel(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
+    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function buildHrChart(canvasId, data, color, label) {
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return null;
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim();
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => hrFormatLabel(d.t)),
+      datasets: [{
+        label,
+        data: data.map(d => d.v),
+        borderColor: color,
+        backgroundColor: color.replace(')', ', 0.08)').replace('rgb', 'rgba'),
+        borderWidth: 1.5,
+        pointRadius: data.length > 200 ? 0 : 2,
+        pointHoverRadius: 4,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' ' + fmtHashrate(ctx.parsed.y),
+            title: ctx => ctx[0].label,
+          },
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          titleColor: textColor,
+          bodyColor: color,
+          borderColor: color,
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: textColor,
+            font: { family: "'Space Mono', monospace", size: 9 },
+            maxTicksLimit: 8,
+            maxRotation: 0,
+          },
+          grid: { color: gridColor },
+        },
+        y: {
+          ticks: {
+            color: textColor,
+            font: { family: "'Space Mono', monospace", size: 9 },
+            callback: v => fmtHashrate(v),
+          },
+          grid: { color: gridColor },
+        }
+      }
+    }
+  });
+}
+
+function renderHrCharts() {
+  const btcRaw = hrLoad(HR_KEY_BTC);
+  const kasRaw = hrLoad(HR_KEY_KAS);
+  const btcData = hrFilter(btcRaw, btcHrRange);
+  const kasData = hrFilter(kasRaw, kasHrRange);
+
+  document.getElementById('btc-hr-count').textContent = btcRaw.length.toLocaleString();
+  document.getElementById('kas-hr-count').textContent = kasRaw.length.toLocaleString();
+
+  // BTC chart
+  if (btcHrChart) { btcHrChart.destroy(); btcHrChart = null; }
+  if (btcData.length === 0) {
+    const c = document.getElementById('btc-hr-chart');
+    if (c) { const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+  } else {
+    btcHrChart = buildHrChart('btc-hr-chart', btcData, '#f7931a', 'BTC Hashrate');
+  }
+
+  // KAS chart
+  if (kasHrChart) { kasHrChart.destroy(); kasHrChart = null; }
+  if (kasData.length === 0) {
+    const c = document.getElementById('kas-hr-chart');
+    if (c) { const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+  } else {
+    kasHrChart = buildHrChart('kas-hr-chart', kasData, '#49deb0', 'KAS Hashrate');
+  }
+}
+
+function setHrRange(coin, range, el) {
+  if (coin === 'btc') {
+    btcHrRange = range;
+    document.querySelectorAll('[id^="btc-hr-range-"]').forEach(b => b.classList.remove('active'));
+  } else {
+    kasHrRange = range;
+    document.querySelectorAll('[id^="kas-hr-range-"]').forEach(b => b.classList.remove('active'));
+  }
+  if (el) el.classList.add('active');
+  renderHrCharts();
+}
+
+function clearHrData(coin) {
+  if (!confirm(`Clear all stored ${coin.toUpperCase()} hashrate history?`)) return;
+  try { localStorage.removeItem(coin === 'btc' ? HR_KEY_BTC : HR_KEY_KAS); } catch(e) {}
+  renderHrCharts();
+}
+
+function switchPeriod(period, el) {
+  currentPeriod = period;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  loadAll();
+  renderHrCharts();
+}
+
+// Store hashrate data points on each loadAll
+function storeHashrateSamples() {
+  // BTC: parse from the displayed value by re-fetching from mempool
+  fetchBTCHashrateSample();
+  fetchKASHashrateSample();
+}
+
+async function fetchBTCHashrateSample() {
+  // Primary: mempool.space
+  try {
+    const res = await fetch('https://mempool.space/api/v1/mining/hashrate/3d');
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.difficulty?.length) {
+        const diff = data.difficulty[data.difficulty.length - 1].difficulty;
+        hrAppend(HR_KEY_BTC, diff * Math.pow(2, 32) / 600);
+        return;
+      }
+    }
+  } catch {}
+  // Fallback: Blockchair /bitcoin/stats
+  try {
+    const res = await fetch('https://api.blockchair.com/bitcoin/stats');
+    if (res.ok) {
+      const d = await res.json();
+      const hr = parseFloat(d?.data?.hashrate_24h);
+      if (hr > 0) hrAppend(HR_KEY_BTC, hr);
+    }
+  } catch {}
+}
+
+async function fetchKASHashrateSample() {
+  try {
+    const res = await fetch('https://api.kaspa.org/info/blockdag');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data?.difficulty) {
+      hrAppend(HR_KEY_KAS, data.difficulty * 2 * 10);
+    }
+  } catch(e) {}
+}
+
+initTheme();
+loadAll();
+storeHashrateSamples();
+renderHrCharts();
+setInterval(loadAll, 5*60*1000);
+setInterval(storeHashrateSamples, 15*60*1000);
+</script>
+</body>
+</html>
